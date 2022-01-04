@@ -1,27 +1,34 @@
 using Stipple
 using StippleUI
-using Genie.Requests, Genie.Renderer
-using Images, Colors, FileIO, Plots;
+using Genie.Requests, Genie.Renderer, Genie.Router
+using Images, Colors, FileIO, Plots,ImageMagick,Base64;
+
 Genie.config.cors_headers["Access-Control-Allow-Origin"] = "*"
 Genie.config.cors_headers["Access-Control-Allow-Headers"] = "Content-Type"
 Genie.config.cors_headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
 Genie.config.cors_allowed_origins = ["*"]
 
-const FILE_PATH = "img/newimages"
+const FILE_PATH = "img/newimages.jpg"
+const FINAL_PATH = "img/newimages/final.jpg"
 
 # CardDemo definition inheriting from ReactiveModel
 # Base.@kwdef: that defines keyword based contructor of mutable struct
-Base.@kwdef mutable struct CardDemo <: ReactiveModel
+@reactive mutable struct Model <: ReactiveModel
     process::R{Bool} = false
 end
 
-# passing CardDemo object(contruction) for 2-way integration between Julia and JavaScript
-# returns {ReactiveModel}
-hs_model = Stipple.init(CardDemo())
+model = Model |> init
 
-on(hs_model.process) do _
-    img =  @info filename(filespayload(:img))
+on(model.process) do _
+    # img =  @info filename(filespayload(:img))
+    
+    @info "Working"
+
+    img = FileIO.load("img/Lena.png")
+
     img_gray = Gray.(img)
+
+    @info img_gray
     sobel_image = convert(Array{Float64}, img_gray)
     kernel_x = Array{Float64}([1 0 -1; 2 0 -2; 1 0 -1])
     kernel_y = Array{Float64}([1 2 1; 0 0 0; -1 -2 -1])
@@ -47,13 +54,21 @@ on(hs_model.process) do _
         end
         return edge_img
     end
+
+    # maybe you should call sobel image
+    # sobel(____whateve imag___)
+    open(FINAL_PATH, "w") do io
+        save(FILE_PATH, sobel(sobel_image))
+        
+    # @save plot(sobel(sobel_image)) image
+    # @info image
+    end
 end
 
 
-function ui()
+function ui(model)
     [
-        page( # page generates HTML code for Single Page Application 
-            vm(hs_model),
+        page( model,
             class = "container",
             title = "Card Demo",
             partial = true,
@@ -97,21 +112,30 @@ function ui()
     ]
 end
 
-route("/", ui)
+route("/") do
+    html(ui(model), context = @__MODULE__)
+end
 
 route("/upload", method = POST) do
-    if infilespayload(:img)
-        @info filename(filespayload(:img))
-        @info filespayload(:img).data
-
-        open(FILE_PATH, "w") do io
-            write(FILE_PATH, filespayload(:img).data)
-        end
-    else
-        @info "No image uploaded"
+    # if infilespayload(:img)
+    #     @info Requests.filename(filespayload(:img))
+    #     #@info filespayload(:img).data
+        
+    #     # open(FILE_PATH, "w") do io
+    #     #     # write(FILE_PATH, filespayload(:img).data)
+    #     #     #save(FILE_PATH, filespayload(:img).data)
+    #     #     #save(File(format"PNG", "gray.png"), filespayload(:img).data)
+    #     #     ImageMagick.save("img/sample.png",  Base64.base64encode(filespayload(:img).data))
+    #     #end
+    # else
+    #     @info "No image uploaded"
+       
+    # end
+    for (name,img) in @params(:FILES)
+        write(img.name, IOBuffer(img.data))
     end
 
     Genie.Renderer.redirect(:get)
 end
 
-up(open_browser = true)
+# isrunning(:webserver) || up()
