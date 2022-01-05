@@ -8,7 +8,7 @@ Genie.config.cors_headers["Access-Control-Allow-Headers"] = "Content-Type"
 Genie.config.cors_headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
 Genie.config.cors_allowed_origins = ["*"]
 
-const FILE_PATH = "img/newimages.jpg"
+const FILE_PATH = "sample.jpg"
 const FINAL_PATH = "img/newimages/final.jpg"
 
 # CardDemo definition inheriting from ReactiveModel
@@ -24,7 +24,7 @@ on(model.process) do _
     
     @info "Working"
 
-    img = FileIO.load("img/Lena.png")
+    img = FileIO.load("sample.jpg")
 
     img_gray = Gray.(img)
 
@@ -57,12 +57,15 @@ on(model.process) do _
 
     # maybe you should call sobel image
     # sobel(____whateve imag___)
-    open(FINAL_PATH, "w") do io
-        save(FILE_PATH, sobel(sobel_image))
+    # open(FINAL_PATH, "w") do io
+    # imadjustintensity(Float64.(sobel_image), extrema(sobel_image))
+    lastImage = clamp01nan.(sobel(sobel_image))
+    save("transformedimage.jpg",lastImage)
+    HTML("<img src='img/$lastImage' />")
         
     # @save plot(sobel(sobel_image)) image
     # @info image
-    end
+    #end
 end
 
 
@@ -103,6 +106,7 @@ function ui(model)
                             card(
                                 class = "text-primary d-flex justify-content-end",
                                 Html.div(class = "col-md-12"),
+
                             ),
                         ])
                     ],
@@ -117,24 +121,16 @@ route("/") do
 end
 
 route("/upload", method = POST) do
-    # if infilespayload(:img)
-    #     @info Requests.filename(filespayload(:img))
-    #     #@info filespayload(:img).data
+    if infilespayload(:img)
+        @info Requests.filename(filespayload(:img))
         
-    #     # open(FILE_PATH, "w") do io
-    #     #     # write(FILE_PATH, filespayload(:img).data)
-    #     #     #save(FILE_PATH, filespayload(:img).data)
-    #     #     #save(File(format"PNG", "gray.png"), filespayload(:img).data)
-    #     #     ImageMagick.save("img/sample.png",  Base64.base64encode(filespayload(:img).data))
-    #     #end
-    # else
-    #     @info "No image uploaded"
+        open(FILE_PATH, "w") do io
+            write(FILE_PATH, filespayload(:img).data)
+        end
+    else
+        @info "No image uploaded"
        
-    # end
-    for (name,img) in @params(:FILES)
-        write(img.name, IOBuffer(img.data))
     end
-
     Genie.Renderer.redirect(:get)
 end
 
