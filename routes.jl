@@ -8,23 +8,23 @@ Genie.config.cors_headers["Access-Control-Allow-Headers"] = "Content-Type"
 Genie.config.cors_headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
 Genie.config.cors_allowed_origins = ["*"]
 
-const FILE_PATH = "sample.jpg"
-const FINAL_PATH = "img/newimages/final.jpg"
+const FILE_PATH = "public/sample.jpg"
+const FINAL_PATH = "final.jpg"
+#const IMGPATH = "demo.png"
 
 # CardDemo definition inheriting from ReactiveModel
 # Base.@kwdef: that defines keyword based contructor of mutable struct
 @reactive mutable struct Model <: ReactiveModel
     process::R{Bool} = false
+    imageurl::R{String} = FINAL_PATH
 end
 
 model = Model |> init
 
 on(model.process) do _
-    # img =  @info filename(filespayload(:img))
-    
     @info "Working"
 
-    img = FileIO.load("sample.jpg")
+    img = FileIO.load(FILE_PATH)
 
     img_gray = Gray.(img)
 
@@ -55,18 +55,15 @@ on(model.process) do _
         return edge_img
     end
 
-    # maybe you should call sobel image
-    # sobel(____whateve imag___)
-    # open(FINAL_PATH, "w") do io
-    # imadjustintensity(Float64.(sobel_image), extrema(sobel_image))
+  
     lastImage = clamp01nan.(sobel(sobel_image))
-    save("transformedimage.jpg",lastImage)
-    HTML("<img src='img/$lastImage' />")
+    #save(FINAL_PATH, lastImage)
+    save(joinpath(@__DIR__, "public", FINAL_PATH), lastImage)
+    model.imageurl[] = "$FINAL_PATH#$(Base.time())"
+      
         
-    # @save plot(sobel(sobel_image)) image
-    # @info image
-    #end
 end
+
 
 
 function ui(model)
@@ -77,7 +74,7 @@ function ui(model)
             partial = true,
             [
                 row( # row takes a tuple of cells. Creates a `div` HTML element with a CSS class named `row`.
-                    cell([h1("Card Component example")]),
+                    cell([h1("Edge Detection Project")]),
                 )
                 row(
                     [
@@ -105,8 +102,8 @@ function ui(model)
                             h2("Transformed Image"),
                             card(
                                 class = "text-primary d-flex justify-content-end",
-                                Html.div(class = "col-md-12"),
-
+                                quasar(:img, src=:imageurl, spinner__color="white", style="height: 140px; max-width: 150px")
+                                
                             ),
                         ])
                     ],
@@ -120,18 +117,21 @@ route("/") do
     html(ui(model), context = @__MODULE__)
 end
 
+
 route("/upload", method = POST) do
     if infilespayload(:img)
         @info Requests.filename(filespayload(:img))
         
         open(FILE_PATH, "w") do io
             write(FILE_PATH, filespayload(:img).data)
+   
         end
     else
         @info "No image uploaded"
        
-    end
+    end 
+    @click("process = false")
     Genie.Renderer.redirect(:get)
 end
 
-# isrunning(:webserver) || up()
+#isrunning(:webserver) || up()
