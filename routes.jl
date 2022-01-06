@@ -16,12 +16,13 @@ const FINAL_PATH = "final.jpg"
 # Base.@kwdef: that defines keyword based contructor of mutable struct
 @reactive mutable struct Model <: ReactiveModel
     process::R{Bool} = false
-    imageurl::R{String} = FINAL_PATH
+    imageurl::R{String} = ""
 end
 
 model = Model |> init
 
 on(model.process) do _
+    model.imageurl[] = ""
     @info "Working"
 
     img = FileIO.load(FILE_PATH)
@@ -58,9 +59,15 @@ on(model.process) do _
   
     lastImage = clamp01nan.(sobel(sobel_image))
     #save(FINAL_PATH, lastImage)
-    save(joinpath(@__DIR__, "public", FINAL_PATH), lastImage)
-    model.imageurl[] = "$FINAL_PATH#$(Base.time())"
-      
+    #save(joinpath(@__DIR__, "public", FINAL_PATH), lastImage)
+    @info save(joinpath(@__DIR__, "public", FINAL_PATH), lastImage)
+   
+    model.imageurl[] = "/$FINAL_PATH#$(Base.time())"
+    @info model.imageurl[]
+    if (model.process[])
+        model.process[] = false
+        #model.imageurl[] = ""
+    end
         
 end
 
@@ -102,8 +109,8 @@ function ui(model)
                             h2("Transformed Image"),
                             card(
                                 class = "text-primary d-flex justify-content-end",
-                                #quasar(:img, src=:imageurl, spinner__color="white", style="height: 140px; max-width: 150px")
-                                imageview(src=:imageurl, spinner__color="white", style="height: 140px; max-width: 150px")
+                                quasar(:img, src=:imageurl, spinner__color="white", style="height: 140px; max-width: 150px")
+                                #imageview(src=:imageurl, spinner__color="white", style="height: 250px; max-width: 250px")
                             ),
                         ])
                     ],
@@ -124,13 +131,12 @@ route("/upload", method = POST) do
         
         open(FILE_PATH, "w") do io
             write(FILE_PATH, filespayload(:img).data)
-   
+        @info File
         end
     else
         @info "No image uploaded"
        
     end 
-    @click("process = false")
     Genie.Renderer.redirect(:get)
 end
 
