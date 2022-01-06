@@ -102,8 +102,8 @@ function ui(model)
                             h2("Transformed Image"),
                             card(
                                 class = "text-primary d-flex justify-content-end",
-                                quasar(:img, src=:imageurl, spinner__color="white", style="height: 140px; max-width: 150px")
-                                
+                                #quasar(:img, src=:imageurl, spinner__color="white", style="height: 140px; max-width: 150px")
+                                imageview(src=:imageurl, spinner__color="white", style="height: 140px; max-width: 150px")
                             ),
                         ])
                     ],
